@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-const CLE_FOURNISSEURS = "stockpro-fournisseurs";
+const API_URL = "http://localhost:5000/fournisseurs";
 const CLE_COLONNES = "stockpro-colonnes-fournisseurs";
 
 const colonnesDefaut = {
@@ -80,18 +80,29 @@ function Fournisseurs() {
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState("");
 
-  // Charger les fournisseurs
+  // Charger les fournisseurs depuis MySQL via le backend
   useEffect(() => {
-    try {
-      const donnees = localStorage.getItem(CLE_FOURNISSEURS);
-      const liste = donnees ? JSON.parse(donnees) : [];
+    async function chargerFournisseurs() {
+      try {
+        const reponse = await fetch(API_URL);
 
-      setFournisseurs(Array.isArray(liste) ? liste : []);
-    } catch (err) {
-      setErreur("Impossible de charger les fournisseurs.");
-    } finally {
-      setChargement(false);
+        if (!reponse.ok) {
+          throw new Error("Erreur lors du chargement des fournisseurs.");
+        }
+
+        const donnees = await reponse.json();
+
+        setFournisseurs(Array.isArray(donnees) ? donnees : []);
+        setErreur("");
+      } catch (err) {
+        console.error("Erreur fournisseurs :", err);
+        setErreur("Impossible de charger les fournisseurs.");
+      } finally {
+        setChargement(false);
+      }
     }
+
+    chargerFournisseurs();
   }, []);
 
   // Charger les préférences des colonnes
@@ -141,7 +152,7 @@ function Fournisseurs() {
 
   // Déterminer si un fournisseur est actif
   function estActif(fournisseur) {
-    return fournisseur.actif !== false;
+    return Number(fournisseur.actif) === 1;
   }
 
   // Filtrer et rechercher les fournisseurs
@@ -192,7 +203,7 @@ function Fournisseurs() {
     return fournisseur[colonne] || "-";
   }
 
-  // Ouvrir la fiche technique
+  // Ouvrir la fiche fournisseur
   function ouvrirFiche(id) {
     navigate(`/fournisseurs/${id}`);
   }
@@ -369,6 +380,8 @@ function Fournisseurs() {
         {/* Tableau */}
         {chargement ? (
           <p>Chargement des fournisseurs...</p>
+        ) : erreur ? (
+          <p>La liste des fournisseurs n'a pas pu être chargée.</p>
         ) : fournisseursFiltres.length === 0 ? (
           <p>
             {fournisseurs.length === 0
